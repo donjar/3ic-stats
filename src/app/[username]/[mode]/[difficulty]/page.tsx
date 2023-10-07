@@ -12,12 +12,12 @@ const Page = async ({
   params: Params;
 }) => {
   const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_HOST,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    process.env.NEXT_PUBLIC_SUPABASE_HOST ?? "",
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
   );
 
   const dbData = await supabase
-    .from("scores")
+    .from("scores_with_rank")
     .select("lamp, score, charts!inner(id, difficulty, songs!inner(song_name))")
     .eq("username", username)
     .eq("charts.rating", difficulty)
@@ -29,7 +29,7 @@ const Page = async ({
         ? ["BDP", "DDP", "EDP", "CDP"]
         : [],
     );
-  const data = dbData.data.map(
+  const data = (dbData.data as any[])?.map(
     ({
       lamp,
       score,
@@ -40,6 +40,10 @@ const Page = async ({
       },
     }) => ({ song: song_name, chartId: id, difficulty, score, lamp }),
   );
+  if (!data) {
+    return null;
+  }
+
   const scores = data.map(({ score }) => score);
   const nonzeroScores = scores.filter((s) => s != 0).sort((a, b) => a - b);
 
@@ -53,7 +57,7 @@ const Page = async ({
     nonzeroScores.reduce((accum, curr) => accum + curr) / nonzeroScores.length;
 
   const l4score = nonzeroScores.reduce(
-    ((accum, curr) =>
+    (accum, curr) =>
       accum +
       (curr >= 999000
         ? 5
@@ -65,7 +69,8 @@ const Page = async ({
         ? 2
         : curr >= 900000
         ? 1
-        : 0)), 0
+        : 0),
+    0,
   );
 
   return (

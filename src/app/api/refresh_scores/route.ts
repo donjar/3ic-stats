@@ -10,13 +10,13 @@ const DIFFICULTIES = {
   DDP: 6,
   EDP: 7,
   CDP: 8,
-};
+} as Record<string, number>;
 const PAGINATION = 10;
 
 export const POST = async () => {
   const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_HOST,
-    process.env.SUPABASE_SERVICE_KEY,
+    process.env.NEXT_PUBLIC_SUPABASE_HOST ?? "",
+    process.env.SUPABASE_SERVICE_KEY ?? "",
   );
 
   let page = 0;
@@ -24,11 +24,11 @@ export const POST = async () => {
     const charts = (
       await supabase
         .from("charts")
-        .select("id, difficulty, rating, songs (song_id)")
+        .select("id, difficulty, rating, songs(song_id)")
         .order("id")
         .range(page, page + PAGINATION - 1)
     ).data;
-    if (charts.length === 0) {
+    if (!charts || charts.length === 0) {
       break;
     }
     console.log(`Fetching page ${page} to ${page + PAGINATION}`);
@@ -40,6 +40,7 @@ export const POST = async () => {
             "content-type": "application/json",
           },
           body: JSON.stringify({
+            // @ts-ignore
             song_id: c.songs.song_id,
             SP_or_DP: DIFFICULTIES[c.difficulty] <= 4 ? 0 : 1,
             difficulty: DIFFICULTIES[c.difficulty],
@@ -52,7 +53,7 @@ export const POST = async () => {
     const now = new Date().toISOString();
     await supabase.from("scores").insert(
       data.flatMap((d, i) =>
-        d.map((s) => ({
+        d.map((s: any) => ({
           chart_id: charts[i].id,
           username: s.username,
           score: s.score,

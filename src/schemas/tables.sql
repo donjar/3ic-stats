@@ -30,3 +30,5 @@ create table scores (
   unique (chart_id, username)
 );
 create index scores_chart_id_score_idx on scores (chart_id, score);
+
+create view scores_with_rank as select *, rank() over (partition by chart_id order by score desc) from scores;
