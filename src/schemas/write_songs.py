@@ -1,0 +1,37 @@
+import json
+import requests
+import psycopg
+from datetime import datetime
+
+data = requests.get("https://3icecream.com/js/songdata.js").text
+cleaned = json.loads(
+    data[len("var ALL_SONG_DATA=") :].split(";const EVENT_EXCLUSIONS")[0]
+)
+
+difficulties = ["bSP", "BSP", "DSP", "ESP", "CSP", "BDP", "DDP", "EDP", "CDP"]
+
+with psycopg.connect("service=3ic") as conn:
+    for c in cleaned:
+        if c.get("deleted") == 1:
+            continue
+
+        print(f"Inserting: {c['song_name']}")
+
+        now = datetime.now()
+        with conn.cursor() as cur:
+            cur.execute(
+                f"insert into songs (song_id, song_name, alphabet, version_num, created_at, updated_at) values (%s, %s, %s, %s, %s, %s) returning id",
+                (c["song_id"], c["song_name"], c["alphabet"], c["version_num"], now, now),
+            )
+            song_id = cur.fetchone()[0]
+
+            for r, difficulty in zip(c["ratings"], difficulties):
+                if r == 0:
+                    continue
+
+                cur.execute(
+                    f"insert into charts (song_id, difficulty, rating, created_at, updated_at) values (%s, %s, %s, %s, %s)",
+                    (song_id, difficulty, r, now, now),
+                )
+
+            conn.commit()
