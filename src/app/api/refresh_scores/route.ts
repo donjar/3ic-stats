@@ -13,13 +13,14 @@ const DIFFICULTIES = {
 } as Record<string, number>;
 const PAGINATION = 10;
 
-export const POST = async () => {
+export const POST = async (req: Request) => {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_HOST ?? "",
     process.env.SUPABASE_SERVICE_KEY ?? "",
   );
 
-  let page = 0;
+  // @ts-ignore
+  let page = req.nextUrl.searchParams.get("page") ?? 0;
   while (true) {
     const charts = (
       await supabase

@@ -15,7 +15,9 @@ export const metadata = {
 const RootLayout = ({ children }: React.PropsWithChildren) => (
   <html lang="en">
     <body className={inter.className}>
-      <StyledComponentsRegistry>{children}</StyledComponentsRegistry>
+      <StyledComponentsRegistry>
+        <div style={{ padding: "8px" }}>{children}</div>
+      </StyledComponentsRegistry>
     </body>
   </html>
 );
