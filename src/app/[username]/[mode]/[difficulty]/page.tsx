@@ -18,7 +18,9 @@ const Page = async ({
 
   const dbData = await supabase
     .from("scores_with_rank")
-    .select("lamp, score, charts!inner(id, difficulty, songs!inner(song_name))")
+    .select(
+      "lamp, score, rank, charts!inner(id, difficulty, songs!inner(song_name))",
+    )
     .eq("username", username)
     .eq("charts.rating", difficulty)
     .in(
@@ -28,17 +30,19 @@ const Page = async ({
         : mode === "double"
         ? ["BDP", "DDP", "EDP", "CDP"]
         : [],
-    );
+    )
+    .order("rank");
   const data = (dbData.data as any[])?.map(
     ({
       lamp,
       score,
+      rank,
       charts: {
         id,
         difficulty,
         songs: { song_name },
       },
-    }) => ({ song: song_name, chartId: id, difficulty, score, lamp }),
+    }) => ({ song: song_name, chartId: id, difficulty, score, rank, lamp }),
   );
   if (!data) {
     return null;
@@ -56,39 +60,42 @@ const Page = async ({
   const mean =
     nonzeroScores.reduce((accum, curr) => accum + curr) / nonzeroScores.length;
 
-  const l4score = nonzeroScores.reduce(
-    (accum, curr) =>
-      accum +
-      (curr >= 999000
+  const l4scores = nonzeroScores.map(
+    (s) =>
+      (s >= 999000
         ? 5
-        : curr >= 990000
+        : s >= 990000
         ? 4
-        : curr >= 975000
+        : s >= 975000
         ? 3
-        : curr >= 950000
+        : s >= 950000
         ? 2
-        : curr >= 900000
+        : s >= 900000
         ? 1
-        : 0),
-    0,
+        : 0) as number,
   );
+  const l4score = l4scores.reduce((accum, curr) => accum + curr);
 
   return (
     <>
       <h1>
-        {mode} {difficulty}
+        {username} - {mode} {difficulty}
       </h1>
-      <p>Mean: {mean}</p>
+      <p>Mean: {mean.toFixed(0)}</p>
       <p>Median: {median}</p>
       <p>
         L4Score: {l4score} / {nonzeroScores.length * 5} (
-        {(l4score * 100) / nonzeroScores.length / 5}%)
+        {((l4score * 100) / nonzeroScores.length / 5).toFixed(2)}%) (
+        {[0, 1, 2, 3, 4, 5]
+          .map((i) => l4scores.filter((j) => i === j).length)
+          .join(", ")}
+        )
       </p>
       <h2>Scores</h2>
       <ul>
-        {data.map(({ song, difficulty, score, lamp, chartId }) => (
+        {data.map(({ song, difficulty, score, rank, lamp, chartId }) => (
           <li key={chartId}>
-            {song} ({difficulty}): {score}
+            {song} ({difficulty}): #{rank} ({score})
           </li>
         ))}
       </ul>
