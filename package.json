@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@ant-design/colors": "^7.0.0",
     "@ant-design/cssinjs": "^1.17.0",
     "@ant-design/icons": "^5.2.6",
     "@supabase/supabase-js": "^2.38.0",

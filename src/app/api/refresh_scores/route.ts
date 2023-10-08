@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { NextRequest } from "next/server";
 
 const DIFFICULTIES = {
   bSP: 0,
@@ -11,28 +12,29 @@ const DIFFICULTIES = {
   EDP: 7,
   CDP: 8,
 } as Record<string, number>;
-const PAGINATION = 10;
 
-export const POST = async (req: Request) => {
+export const POST = async (req: NextRequest) => {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_HOST ?? "",
     process.env.SUPABASE_SERVICE_KEY ?? "",
   );
 
-  // @ts-ignore
-  let page = req.nextUrl.searchParams.get("page") ?? 0;
+  let page = parseInt(req.nextUrl.searchParams.get("page") ?? "0");
+  const pagination = parseInt(
+    req.nextUrl.searchParams.get("pagination") ?? "10",
+  );
   while (true) {
     const charts = (
       await supabase
         .from("charts")
         .select("id, difficulty, rating, songs(song_id)")
         .order("id")
-        .range(page, page + PAGINATION - 1)
+        .range(page, page + pagination - 1)
     ).data;
     if (!charts || charts.length === 0) {
       break;
     }
-    console.log(`Fetching page ${page} to ${page + PAGINATION}`);
+    console.log(`Fetching page ${page} to ${page + pagination}`);
     const data = await Promise.all(
       charts.map((c) =>
         fetch("https://3icecream.com/api/chart_ranking", {
@@ -52,20 +54,27 @@ export const POST = async (req: Request) => {
     console.log("Done");
 
     const now = new Date().toISOString();
-    await supabase.from("scores").insert(
-      data.flatMap((d, i) =>
-        d.map((s: any) => ({
-          chart_id: charts[i].id,
-          username: s.username,
-          score: s.score,
-          lamp: s.lamp,
-          created_at: now,
-          updated_at: now,
-        })),
-      ),
-    );
+    await supabase
+      .from("scores")
+      .upsert(
+        data.flatMap((d, i) =>
+          d.map((s: any) => ({
+            chart_id: charts[i].id,
+            username: s.username,
+            score: s.score,
+            lamp: s.lamp,
+            updated_at: now,
+          })),
+        ),
+        {
+          onConflict: "chart_id,username",
+          ignoreDuplicates: false,
+          defaultToNull: true,
+        },
+      )
+      .select();
 
-    page = page + PAGINATION;
+    page = page + pagination;
   }
 
   return Response.json("ok");

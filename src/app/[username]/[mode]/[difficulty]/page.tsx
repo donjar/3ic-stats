@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Button, Card, Spin, Col, Row, Space } from "antd";
 import { DoubleLeftOutlined, DoubleRightOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
+import { blue, yellow, red, green, purple } from "@ant-design/colors";
 
 interface Params {
   username: string;
@@ -15,7 +16,7 @@ interface Params {
 interface Datum {
   song: string;
   chartId: string;
-  difficulty: number;
+  difficulty: string;
   score: number;
   rank: number;
   lamp: number;
@@ -23,6 +24,15 @@ interface Datum {
 }
 
 const CUTOFFS = [900000, 950000, 975000, 990000, 999000];
+
+const getColorFromDifficulty = (difficulty: string) =>
+  ({
+    b: blue.primary,
+    B: yellow.primary,
+    D: red.primary,
+    E: green.primary,
+    C: purple.primary,
+  })[difficulty[0]];
 
 const Page = ({
   params: { username, mode, difficulty },
@@ -37,36 +47,24 @@ const Page = ({
   useEffect(() => {
     (async () => {
       const dbData = await supabase
-        .from("scores_with_rank")
-        .select(
-          "lamp, score, rank, charts!inner(id, difficulty, songs!inner(song_name))",
-        )
+        .from("scores_enriched")
+        .select()
         .eq("username", username)
-        .eq("charts.rating", difficulty)
+        .eq("rating", difficulty)
         .in(
-          "charts.difficulty",
+          "difficulty",
           mode === "single"
             ? ["bSP", "BSP", "DSP", "ESP", "CSP"]
             : mode === "double"
             ? ["BDP", "DDP", "EDP", "CDP"]
             : [],
-        )
-        .order("rank", { ascending: false });
+        );
 
       setData(
         (dbData.data as any[])?.map(
-          ({
-            lamp,
-            score,
-            rank,
-            charts: {
-              id,
-              difficulty,
-              songs: { song_name },
-            },
-          }) => ({
+          ({ lamp, score, rank, chart_id, difficulty, song_name }) => ({
             song: song_name,
-            chartId: id,
+            chartId: chart_id,
             difficulty,
             score,
             rank,
@@ -151,8 +149,17 @@ const Page = ({
           ({ song, difficulty, score, rank, lamp, chartId, cutoff }) =>
             [null, cutoff].includes(cutoffMode)
               ? [
-                  <Col md={8} key={chartId}>
-                    <Card title={song} size="small">
+                  <Col xs={24} md={8} key={chartId}>
+                    <Card
+                      title={
+                        <span
+                          style={{ color: getColorFromDifficulty(difficulty) }}
+                        >
+                          {song}
+                        </span>
+                      }
+                      size="small"
+                    >
                       <p>Score: {score}</p>
                       <p>Rank: {rank}</p>
                     </Card>
