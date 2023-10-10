@@ -46,10 +46,17 @@ const Page = ({
   const [data, setData] = useState<Datum[] | null>(null);
   useEffect(() => {
     (async () => {
-      const dbData = await supabase
-        .from("scores_enriched")
+      const scoresWithRank = await supabase
+        .from("scores_with_rank")
         .select()
-        .eq("username", username)
+        .eq("username", username);
+      const scoresByChartId = Object.fromEntries(
+        (scoresWithRank.data ?? []).map((s) => [s.chart_id, s]),
+      );
+
+      const charts = await supabase
+        .from("charts")
+        .select("id, difficulty, songs(song_name)")
         .eq("rating", difficulty)
         .in(
           "difficulty",
@@ -61,17 +68,20 @@ const Page = ({
         );
 
       setData(
-        (dbData.data as any[])?.map(
-          ({ lamp, score, rank, chart_id, difficulty, song_name }) => ({
+        (charts.data ?? [])
+          // @ts-ignore
+          .map(({ id, difficulty, songs: { song_name } }) => ({
             song: song_name,
-            chartId: chart_id,
+            chartId: id,
             difficulty,
-            score,
-            rank,
-            lamp,
-            cutoff: CUTOFFS.findLastIndex((c) => score >= c) + 1,
-          }),
-        ),
+            score: scoresByChartId[id]?.score,
+            rank: scoresByChartId[id]?.rank,
+            lamp: scoresByChartId[id]?.lamp,
+            cutoff:
+              scoresByChartId[id] &&
+              CUTOFFS.findLastIndex((c) => scoresByChartId[id].score >= c) + 1,
+          }))
+          .sort((a, b) => (b.rank ?? -1) - (a.rank ?? -1)),
       );
     })();
   }, [username, mode, difficulty]);
@@ -81,7 +91,7 @@ const Page = ({
   }
 
   const scores = data.map(({ score }) => score);
-  const nonzeroScores = scores.filter((s) => s != 0).sort((a, b) => a - b);
+  const nonzeroScores = scores.filter((s) => !!s).sort((a, b) => a - b);
 
   const median =
     nonzeroScores.length % 2
@@ -92,7 +102,10 @@ const Page = ({
   const mean =
     nonzeroScores.reduce((accum, curr) => accum + curr) / nonzeroScores.length;
 
-  const cutoffScore = data.reduce((accum, { cutoff }) => accum + cutoff, 0);
+  const cutoffScore = data.reduce(
+    (accum, { cutoff }) => accum + (cutoff ?? 0),
+    0,
+  );
 
   const otherMode =
     mode === "single" ? "double" : mode === "double" ? "single" : "";
