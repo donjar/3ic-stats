@@ -5,7 +5,15 @@ import { useEffect, useState } from "react";
 import { Button, Card, Spin, Col, Row, Space } from "antd";
 import { DoubleLeftOutlined, DoubleRightOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
-import { blue, yellow, red, green, purple } from "@ant-design/colors";
+import {
+  blue,
+  gold,
+  red,
+  green,
+  purple,
+  volcano,
+  magenta,
+} from "@ant-design/colors";
 
 interface Params {
   username: string;
@@ -28,11 +36,21 @@ const CUTOFFS = [900000, 950000, 975000, 990000, 999000];
 const getColorFromDifficulty = (difficulty: string) =>
   ({
     b: blue.primary,
-    B: yellow.primary,
+    B: gold.primary,
     D: red.primary,
     E: green.primary,
     C: purple.primary,
   })[difficulty[0]];
+
+const RANK_COLORS = [
+  volcano.primary,
+  "#000000",
+  red.primary,
+  blue.primary,
+  green.primary,
+  gold.primary,
+  magenta.primary,
+];
 
 const Page = ({
   params: { username, mode, difficulty },
@@ -173,7 +191,12 @@ const Page = ({
                       }
                       size="small"
                     >
-                      <p>Score: {score}</p>
+                      <p>
+                        Score:{" "}
+                        <span style={{ color: RANK_COLORS[lamp] }}>
+                          {score}
+                        </span>
+                      </p>
                       <p>Rank: {rank}</p>
                     </Card>
                   </Col>,

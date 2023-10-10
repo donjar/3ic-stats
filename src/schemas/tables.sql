@@ -31,6 +31,13 @@ create table scores (
 );
 create index scores_chart_id_score_idx on scores (chart_id, score);
 
-create view scores_with_rank as select *, rank() over (partition by chart_id order by score desc) from scores;
+create materialized view scores_with_rank as select *, rank() over (partition by chart_id order by score desc) from scores;
+create index scores_with_rank_username_idx on scores_with_rank (username);
 
-create view scores_enriched as select username, rating, lamp, score, rank, chart_id, difficulty, song_name from scores_with_rank right outer join charts on scores_with_rank.chart_id = charts.id right outer join songs on charts.song_id = songs.id order by rank desc;
+create function refresh_scores_with_rank() returns boolean security definer as
+$$
+begin
+  refresh materialized view scores_with_rank;
+  return true;
+end
+$$ language plpgsql;
