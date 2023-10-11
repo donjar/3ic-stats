@@ -23,6 +23,8 @@ export const POST = async (req: NextRequest) => {
   const pagination = parseInt(
     req.nextUrl.searchParams.get("pagination") ?? "100",
   );
+  const onlyPage = !!req.nextUrl.searchParams.get("onlyPage");
+
   while (true) {
     const charts = (
       await supabase
@@ -75,6 +77,10 @@ export const POST = async (req: NextRequest) => {
       .select();
 
     page = page + pagination;
+
+    if (onlyPage) {
+      break;
+    }
   }
 
   await supabase.rpc("refresh_scores_with_rank");
