@@ -29,6 +29,9 @@ with psycopg.connect("service=3ic") as conn:
                 if r == 0:
                     continue
 
+                if r < 13:  # We only include difficulty >= 13 to save space
+                    continue
+
                 cur.execute(
                     f"insert into charts (song_id, difficulty, rating, created_at, updated_at) values (%s, %s, %s, %s, %s)",
                     (song_id, difficulty, r, now, now),

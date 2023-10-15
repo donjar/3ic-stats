@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "lint-fix": "prettier src --write; eslint src --fix; tsc"
   },
   "dependencies": {
     "@ant-design/colors": "^7.0.0",
