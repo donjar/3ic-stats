@@ -25,7 +25,6 @@ const upsertData = async (
       username: username,
       score: score,
       lamp: lamp,
-      updated_at: new Date().toISOString(),
     })),
     {
       onConflict: "chart_id,username",
@@ -86,7 +85,7 @@ export const POST = async (req: NextRequest) => {
   await fetchAndStoreData(
     supabase,
     parseInt(req.nextUrl.searchParams.get("page") ?? "0"),
-    parseInt(req.nextUrl.searchParams.get("pageSize") ?? "2000"),
+    parseInt(req.nextUrl.searchParams.get("pageSize") ?? "1"),
   );
 
   console.log("Refreshing");
