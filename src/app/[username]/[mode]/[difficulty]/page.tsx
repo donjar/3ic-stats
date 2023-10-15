@@ -4,6 +4,7 @@ import supabase from "../../../../lib/supabase";
 import { useEffect, useState } from "react";
 import { Button, Card, Spin, Col, Row, Space } from "antd";
 import { DoubleLeftOutlined, DoubleRightOutlined } from "@ant-design/icons";
+import Head from "next/head";
 import { useRouter } from "next/navigation";
 import {
   blue,
@@ -29,6 +30,7 @@ interface Datum {
   rank: number;
   lamp: number;
   cutoff: number;
+  targetScore: number;
 }
 
 const CUTOFFS = [900000, 950000, 975000, 990000, 999000];
@@ -60,18 +62,11 @@ const Page = ({
   const router = useRouter();
 
   const [cutoffMode, setCutoffMode] = useState<number | null>(null);
+  const [lampMode, setLampMode] = useState<number | null>(null);
 
   const [data, setData] = useState<Datum[] | null>(null);
   useEffect(() => {
     (async () => {
-      const scoresWithRank = await supabase
-        .from("scores_with_rank")
-        .select()
-        .eq("username", username);
-      const scoresByChartId = Object.fromEntries(
-        (scoresWithRank.data ?? []).map((s) => [s.chart_id, s]),
-      );
-
       const charts = await supabase
         .from("charts")
         .select("id, difficulty, songs(song_name)")
@@ -84,9 +79,34 @@ const Page = ({
             ? ["BDP", "DDP", "EDP", "CDP"]
             : [],
         );
+      const chartsData = charts.data ?? [];
+
+      const scoresWithRank = await supabase
+        .from("scores_with_rank")
+        .select()
+        .eq("username", username)
+        .in(
+          "chart_id",
+          chartsData.map(({ id }) => id),
+        );
+      const scoresByChartId = Object.fromEntries(
+        (scoresWithRank.data ?? []).map((s) => [s.chart_id, s]),
+      );
+
+      const targetScores = await supabase
+        .from("scores_with_rank")
+        .select()
+        .eq("row_number", 100)
+        .in(
+          "chart_id",
+          chartsData.map(({ id }) => id),
+        );
+      const targetScoresByChartId = Object.fromEntries(
+        (targetScores.data ?? []).map((s) => [s.chart_id, s]),
+      );
 
       setData(
-        (charts.data ?? [])
+        chartsData
           // @ts-ignore
           .map(({ id, difficulty, songs: { song_name } }) => ({
             song: song_name,
@@ -98,6 +118,7 @@ const Page = ({
             cutoff:
               scoresByChartId[id] &&
               CUTOFFS.findLastIndex((c) => scoresByChartId[id].score >= c) + 1,
+            targetScore: targetScoresByChartId[id]?.score,
           }))
           .sort((a, b) => (b.rank ?? -1) - (a.rank ?? -1)),
       );
@@ -107,6 +128,8 @@ const Page = ({
   if (!data) {
     return <Spin size="large" />;
   }
+
+  console.log(data);
 
   const scores = data.map(({ score }) => score);
   const nonzeroScores = scores.filter((s) => !!s).sort((a, b) => a - b);
@@ -128,12 +151,15 @@ const Page = ({
   const otherMode =
     mode === "single" ? "double" : mode === "double" ? "single" : "";
 
+  const title = `${username} - ${mode} ${difficulty}`;
+
   return (
     <>
+      <Head>
+        <title>{title}</title>
+      </Head>
       <Space>
-        <h1>
-          {username} - {mode} {difficulty}
-        </h1>
+        <h1>{title}</h1>
         <Button
           size="small"
           icon={<DoubleLeftOutlined />}
@@ -164,7 +190,7 @@ const Page = ({
           <Button
             size="small"
             key={i}
-            type="link"
+            type={i !== cutoffMode ? "link" : "default"}
             onClick={() => setCutoffMode(i)}
           >
             {data.filter(({ cutoff }) => i === cutoff).length}
@@ -174,11 +200,37 @@ const Page = ({
           Reset
         </Button>
       </p>
+      <p>
+        Lamps
+        {[0, 1, 3, 4, 5, 6].map((i) => (
+          <Button
+            size="small"
+            key={i}
+            type={i !== lampMode ? "link" : "default"}
+            onClick={() => setLampMode(i)}
+          >
+            {data.filter(({ lamp }) => i === lamp).length}
+          </Button>
+        ))}
+        <Button size="small" type="link" onClick={() => setLampMode(null)}>
+          Reset
+        </Button>
+      </p>
       <h2>Scores</h2>
       <Row gutter={[8, 8]}>
         {data.flatMap(
-          ({ song, difficulty, score, rank, lamp, chartId, cutoff }) =>
-            [null, cutoff].includes(cutoffMode)
+          ({
+            song,
+            difficulty,
+            score,
+            rank,
+            lamp,
+            chartId,
+            cutoff,
+            targetScore,
+          }) =>
+            [null, cutoff].includes(cutoffMode) &&
+            [null, lamp].includes(lampMode)
               ? [
                   <Col xs={24} md={8} key={chartId}>
                     <Card
@@ -192,12 +244,12 @@ const Page = ({
                       size="small"
                     >
                       <p>
-                        Score:{" "}
                         <span style={{ color: RANK_COLORS[lamp] }}>
                           {score}
-                        </span>
+                        </span>{" "}
+                        #{rank}
                       </p>
-                      <p>Rank: {rank}</p>
+                      <p>#100: {targetScore}</p>
                     </Card>
                   </Col>,
                 ]

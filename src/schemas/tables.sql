@@ -28,8 +28,8 @@ create table scores (
 );
 create index scores_chart_id_score_idx on scores (chart_id, score);
 
-create materialized view scores_with_rank as select *, rank() over (partition by chart_id order by score desc) from scores;
-create index scores_with_rank_username_idx on scores_with_rank (username);
+create materialized view scores_with_rank as
+select *, rank() over (partition by chart_id order by score desc), row_number() over (partition by chart_id order by score desc) from scores;
 
 create function refresh_scores_with_rank() returns boolean security definer as
 $$
