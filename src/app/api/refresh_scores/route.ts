@@ -19,20 +19,25 @@ const upsertData = async (
   chartId: string,
   page: number,
 ) => {
-  await supabase.from("scores").upsert(
-    chartScores.map(({ username, score, lamp }) => ({
-      chart_id: chartId,
-      username: username,
-      score: score,
-      lamp: lamp,
-    })),
-    {
-      onConflict: "chart_id,username",
-      ignoreDuplicates: false,
-      defaultToNull: true,
-    },
-  );
-  console.log(`Done page ${page}`);
+  while (true) {
+    try {
+      await supabase.from("scores").upsert(
+        chartScores.map(({ username, score, lamp }) => ({
+          chart_id: chartId,
+          username: username,
+          score: score,
+          lamp: lamp,
+        })),
+        {
+          onConflict: "chart_id,username",
+          ignoreDuplicates: false,
+          defaultToNull: true,
+        },
+      );
+      console.log(`Done page ${page}`);
+      break;
+    } catch {}
+  }
 };
 
 const fetchAndStoreData = async (
