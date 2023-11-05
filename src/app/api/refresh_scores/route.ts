@@ -13,6 +13,8 @@ const DIFFICULTIES = {
   CDP: 8,
 } as Record<string, number>;
 
+const print = (s: string) => console.log(`[${new Date().toISOString()}] ${s}`);
+
 const upsertData = async (
   supabase: SupabaseClient,
   chartScores: any[],
@@ -34,7 +36,7 @@ const upsertData = async (
           defaultToNull: true,
         },
       );
-      console.log(`Done page ${page}`);
+      print(`Done page ${page}`);
       break;
     } catch {}
   }
@@ -45,7 +47,7 @@ const fetchAndStoreData = async (
   page: number,
   size: number,
 ) => {
-  console.log(`Doing page ${page} to ${page + size - 1}`);
+  print(`Doing page ${page} to ${page + size - 1}`);
 
   const charts = (
     await supabase
@@ -61,18 +63,24 @@ const fetchAndStoreData = async (
   await Promise.all(
     charts
       .map(async (c, idx) => {
-        const res = await fetch("https://3icecream.com/api/chart_ranking", {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-          },
-          body: JSON.stringify({
-            // @ts-ignore
-            song_id: c.songs.song_id,
-            SP_or_DP: DIFFICULTIES[c.difficulty] <= 4 ? 0 : 1,
-            difficulty: DIFFICULTIES[c.difficulty],
-          }),
-        });
+        let res;
+        while (true) {
+          try {
+            res = await fetch("https://3icecream.com/api/chart_ranking", {
+              method: "POST",
+              headers: {
+                "content-type": "application/json",
+              },
+              body: JSON.stringify({
+                // @ts-ignore
+                song_id: c.songs.song_id,
+                SP_or_DP: DIFFICULTIES[c.difficulty] <= 4 ? 0 : 1,
+                difficulty: DIFFICULTIES[c.difficulty],
+              }),
+            });
+            break;
+          } catch {}
+        }
         const scoreData = await res.json();
 
         await upsertData(supabase, scoreData, charts[idx].id, page + idx);
@@ -93,9 +101,9 @@ export const POST = async (req: NextRequest) => {
     parseInt(req.nextUrl.searchParams.get("pageSize") ?? "1"),
   );
 
-  console.log("Refreshing");
+  print("Refreshing");
   await supabase.rpc("refresh_scores_with_rank");
-  console.log("Done");
+  print("Done");
 
   return Response.json("ok");
 };
