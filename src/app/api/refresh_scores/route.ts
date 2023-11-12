@@ -57,6 +57,7 @@ const fetchAndStoreData = async (
       .range(page, page + size - 1)
   ).data;
   if (!charts || charts.length === 0) {
+    print(charts);
     return;
   }
 
