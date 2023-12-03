@@ -56,7 +56,6 @@ const Page = ({
 }) => {
   const [selection, setSelection] = useState<string[]>([
     "Show Clear",
-    "Show No Score",
     "Sort Ascending",
   ]);
   const [data, setData] = useState<Datum[] | null>(null);

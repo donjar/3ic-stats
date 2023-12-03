@@ -56,7 +56,6 @@ const Page = ({
 }) => {
   const [selection, setSelection] = useState<string[]>([
     "Show Clear",
-    "Show No Score",
     "Sort Ascending",
   ]);
   const [data, setData] = useState<Datum[] | null>(null);
@@ -95,7 +94,7 @@ const Page = ({
           "chart_id",
           chartsData.map(({ id }) => id),
         )
-        .eq("score_cutoff", cutoff);
+        .eq("lamp_cutoff", cutoff);
       const difficultiesByChartId = Object.fromEntries(
         (difficultiesData.data ?? []).map((s) => [s.chart_id, s.difficulty]),
       );
