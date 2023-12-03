@@ -107,7 +107,7 @@ const Page = ({
 
       setData(
         chartsData
-          // @ts-ignore
+          // @ts-expect-error
           .map(({ id, difficulty, songs: { song_name } }) => ({
             song: song_name,
             chartId: id,
@@ -128,8 +128,6 @@ const Page = ({
   if (!data) {
     return <Spin size="large" />;
   }
-
-  console.log(data);
 
   const scores = data.map(({ score }) => score);
   const nonzeroScores = scores.filter((s) => !!s).sort((a, b) => a - b);

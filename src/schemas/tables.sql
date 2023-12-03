@@ -28,6 +28,16 @@ create table scores (
 );
 create index scores_chart_id_score_idx on scores (chart_id, score);
 
+create table difficulties (
+  chart_id uuid not null references charts (id),
+  score_cutoff integer,
+  lamp_cutoff integer,
+  difficulty numeric not null,
+  created_at timestamp with time zone not null default now(),
+  updated_at timestamp with time zone not null
+);
+create unique index difficulties_chart_id_score_cutoff_lamp_cutoff_difficulty_idx on difficulties (chart_id, score_cutoff, lamp_cutoff, difficulty) nulls not distinct;
+
 create materialized view scores_with_rank as
 select *, rank() over (partition by chart_id order by score desc), row_number() over (partition by chart_id order by score desc) from scores;
 

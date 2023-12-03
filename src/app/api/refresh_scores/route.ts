@@ -13,7 +13,7 @@ const DIFFICULTIES = {
   CDP: 8,
 } as Record<string, number>;
 
-const print = (s: string) => console.log(`[${new Date().toISOString()}] ${s}`);
+const print = (s: any) => console.log(`[${new Date().toISOString()}] ${s}`);
 
 const upsertData = async (
   supabase: SupabaseClient,
@@ -73,7 +73,7 @@ const fetchAndStoreData = async (
                 "content-type": "application/json",
               },
               body: JSON.stringify({
-                // @ts-ignore
+                // @ts-expect-error
                 song_id: c.songs.song_id,
                 SP_or_DP: DIFFICULTIES[c.difficulty] <= 4 ? 0 : 1,
                 difficulty: DIFFICULTIES[c.difficulty],
