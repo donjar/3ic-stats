@@ -20,7 +20,7 @@ with psycopg.connect("service=3ic") as conn:
         now = datetime.now()
         with conn.cursor() as cur:
             cur.execute(
-                f"""insert into songs (song_id, song_name, alphabet, version_num, created_at, updated_at)
+                """insert into songs (song_id, song_name, alphabet, version_num, created_at, updated_at)
                 values (%s, %s, %s, %s, %s, %s)
                 on conflict (song_id) do update set
                 song_name = excluded.song_name, alphabet = excluded.alphabet, version_num = excluded.version_num, updated_at = excluded.updated_at
@@ -44,7 +44,7 @@ with psycopg.connect("service=3ic") as conn:
                     continue
 
                 cur.execute(
-                    f"""insert into charts (song_id, difficulty, rating, created_at, updated_at)
+                    """insert into charts (song_id, difficulty, rating, created_at, updated_at)
                     values (%s, %s, %s, %s, %s)
                     on conflict (song_id, difficulty) do update set
                     rating = excluded.rating, updated_at = excluded.updated_at

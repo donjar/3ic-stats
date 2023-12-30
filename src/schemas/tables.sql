@@ -36,7 +36,7 @@ create table difficulties (
   created_at timestamp with time zone not null default now(),
   updated_at timestamp with time zone not null
 );
-create unique index difficulties_chart_id_score_cutoff_lamp_cutoff_difficulty_idx on difficulties (chart_id, score_cutoff, lamp_cutoff, difficulty) nulls not distinct;
+create unique index difficulties_chart_id_score_cutoff_lamp_cutoff_idx on difficulties (chart_id, score_cutoff, lamp_cutoff) nulls not distinct;
 
 create materialized view scores_with_rank as
 select *, rank() over (partition by chart_id order by score desc), row_number() over (partition by chart_id order by score desc) from scores;

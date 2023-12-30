@@ -1,6 +1,7 @@
 import asyncio
 import httpx
 import psycopg
+import tqdm
 from aiolimiter import AsyncLimiter
 from datetime import datetime
 
@@ -17,16 +18,6 @@ DIFFICULTIES = {
 }
 
 limiter = AsyncLimiter(60)
-
-
-async def execute(cur, chart_id, res_row):
-    await cur.execute(
-        """insert into scores (chart_id, username, score, lamp)
-        values (%s, %s, %s, %s)
-        on conflict (chart_id, username) do update set
-        score = excluded.score, lamp = excluded.lamp""",
-        (chart_id, res_row["username"], res_row["score"], res_row["lamp"]),
-    )
 
 
 async def execute_req(client, cur, conn, chart_id, difficulty, song_id, song_name):
@@ -46,10 +37,9 @@ async def execute_req(client, cur, conn, chart_id, difficulty, song_id, song_nam
         except Exception:
             continue
     res.raise_for_status()
-
-    await asyncio.gather(*[execute(cur, chart_id, res_row) for res_row in res.json()])
-    await conn.commit()
     print(f"({datetime.now()}) Done {song_name} {difficulty}")
+
+    return chart_id, res.json()
 
 
 async def main():
@@ -64,7 +54,7 @@ async def main():
             )
             data = await cur.fetchall()
 
-            await asyncio.gather(
+            all_data = await asyncio.gather(
                 *[
                     execute_req(
                         client, cur, conn, chart_id, difficulty, song_id, song_name
@@ -73,6 +63,18 @@ async def main():
                 ]
             )
 
+            print("Inserting")
+            await cur.execute("truncate scores")
+            await cur.execute("drop index scores_chart_id_score_idx")
+
+            d = [(chart_id, row) for chart_id, res in all_data for row in res]
+            with cursor.copy("copy scores (chart_id, username, score, lamp) from stdin") as copy:
+                for chart_id, row in tqdm.tqdm(d):
+                    copy.write_row((chart_id, row["username"], row["score"], row["lamp"]))
+
+            await cur.execute(
+                "create index scores_chart_id_score_idx on scores (chart_id, score)"
+            )
             await cur.execute("select refresh_scores_with_rank()")
             await conn.commit()
 
