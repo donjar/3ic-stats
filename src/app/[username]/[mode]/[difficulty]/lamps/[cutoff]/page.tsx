@@ -122,7 +122,7 @@ const Page = ({
     .sort(
       (a, b) =>
         (selection.includes("Sort Ascending") ? 1 : -1) *
-        ((a.diffi ?? -1) - (b.diffi ?? -1)),
+        ((a.diffi ?? 101) - (b.diffi ?? 101)),
     )
     .filter(
       (s) =>
@@ -168,7 +168,7 @@ const Page = ({
                         : "#ddd",
                   }}
                 >
-                  <p>Difficulty {diffi.toFixed(0)}</p>
+                  <p>Difficulty {diffi?.toFixed(0)}</p>
                   <p style={{ color: RANK_COLORS[lamp] }}>{score ?? "-"}</p>
                 </Card>
               </Col>

@@ -122,7 +122,7 @@ const Page = ({
     .sort(
       (a, b) =>
         (selection.includes("Sort Ascending") ? 1 : -1) *
-        ((a.diffi ?? -1) - (b.diffi ?? -1)),
+        ((a.diffi ?? 101) - (b.diffi ?? 101)),
     )
     .filter(
       (s) =>
