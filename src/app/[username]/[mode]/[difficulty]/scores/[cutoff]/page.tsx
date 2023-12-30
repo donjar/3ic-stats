@@ -168,7 +168,7 @@ const Page = ({
                         : "#ddd",
                   }}
                 >
-                  <p>Difficulty {diffi.toFixed(0)}</p>
+                  <p>Difficulty {diffi?.toFixed(0)}</p>
                   <p style={{ color: RANK_COLORS[lamp] }}>{score ?? "-"}</p>
                 </Card>
               </Col>
