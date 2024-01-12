@@ -109,8 +109,13 @@ const Page = ({
       const difficultiesData = await chunkifyAndSend(
         chartsData.map(({ id }) => id),
         async (data) =>
-          (await supabase.from("difficulties").select().in("chart_id", data))
-            .data ?? [],
+          (
+            await supabase
+              .from("difficulties")
+              .select()
+              .in("chart_id", data)
+              .eq("lamp_cutoff", cutoff)
+          ).data ?? [],
       );
       const difficultiesByChartId = Object.fromEntries(
         difficultiesData.map((s) => [s.chart_id, s.difficulty]),

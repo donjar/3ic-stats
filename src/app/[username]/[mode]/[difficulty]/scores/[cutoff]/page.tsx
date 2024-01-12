@@ -49,6 +49,22 @@ const RANK_COLORS = [
   magenta.primary,
 ];
 
+const chunkifyAndSend = async <T, U>(
+  data: T[],
+  lambda: (data: T[]) => Promise<U[]>,
+): Promise<U[]> => {
+  const split = 100;
+  let i = 0;
+  let res: U[] = [];
+
+  while (i < data.length) {
+    res = res.concat(await lambda(data.slice(i, i + split)));
+    i += 100;
+  }
+
+  return res;
+};
+
 const Page = ({
   params: { username, mode, difficulty, cutoff },
 }: {
@@ -75,28 +91,34 @@ const Page = ({
         );
       const chartsData = charts.data ?? [];
 
-      const scoresWithRank = await supabase
-        .from("scores_with_rank")
-        .select()
-        .eq("username", username)
-        .in(
-          "chart_id",
-          chartsData.map(({ id }) => id),
-        );
+      const scoresWithRank = await chunkifyAndSend(
+        chartsData.map(({ id }) => id),
+        async (data) =>
+          (
+            await supabase
+              .from("scores_with_rank")
+              .select()
+              .eq("username", username)
+              .in("chart_id", data)
+          ).data ?? [],
+      );
       const scoresByChartId = Object.fromEntries(
-        (scoresWithRank.data ?? []).map((s) => [s.chart_id, s]),
+        scoresWithRank.map((s) => [s.chart_id, s]),
       );
 
-      const difficultiesData = await supabase
-        .from("difficulties")
-        .select()
-        .in(
-          "chart_id",
-          chartsData.map(({ id }) => id),
-        )
-        .eq("score_cutoff", cutoff);
+      const difficultiesData = await chunkifyAndSend(
+        chartsData.map(({ id }) => id),
+        async (data) =>
+          (
+            await supabase
+              .from("difficulties")
+              .select()
+              .in("chart_id", data)
+              .eq("score_cutoff", cutoff)
+          ).data ?? [],
+      );
       const difficultiesByChartId = Object.fromEntries(
-        (difficultiesData.data ?? []).map((s) => [s.chart_id, s.difficulty]),
+        difficultiesData.map((s) => [s.chart_id, s.difficulty]),
       );
 
       setData(
