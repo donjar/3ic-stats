@@ -1,4 +1,4 @@
-create or replace table songs (
+create table songs (
   id uuid primary key default uuid_generate_v4(),
   song_id varchar not null,
   song_name varchar not null,
@@ -10,7 +10,7 @@ create or replace table songs (
   unique (song_id)
 );
 
-create or replace table charts (
+create table charts (
   id uuid primary key default uuid_generate_v4(),
   song_id uuid not null references songs (id),
   difficulty varchar not null,
@@ -22,7 +22,7 @@ create or replace table charts (
 );
 create index charts_rating_idx on charts (rating);
 
-create or replace table scores (
+create table scores (
   chart_id uuid not null references charts (id),
   username varchar not null,
   score integer not null,
@@ -32,7 +32,7 @@ create or replace table scores (
 );
 create index scores_chart_id_score_idx on scores (chart_id, score);
 
-create or replace table difficulties (
+create table difficulties (
   chart_id uuid not null references charts (id),
   score_cutoff integer,
   lamp_cutoff integer,
