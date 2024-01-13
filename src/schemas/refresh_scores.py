@@ -54,21 +54,16 @@ async def main():
             )
             data = await cur.fetchall()
 
-            all_data = [
-                await execute_req(
-                    client, cur, conn, chart_id, difficulty, song_id, song_name
-                )
-                for chart_id, difficulty, song_id, song_name in data
-            ]
-
-            print("Inserting")
             await cur.execute("truncate scores")
             await cur.execute("drop index scores_chart_id_score_idx")
-
-            d = [(chart_id, row) for chart_id, res in all_data for row in res]
             with cursor.copy("copy scores (chart_id, username, score, lamp) from stdin") as copy:
-                for chart_id, row in tqdm.tqdm(d):
-                    copy.write_row((chart_id, row["username"], row["score"], row["lamp"]))
+                for chart_id, difficulty, song_id, song_name in tqdm.tqdm(data):
+                    res = await execute_req(
+                        client, cur, conn, chart_id, difficulty, song_id, song_name
+                    )
+
+                    for row in res:
+                        copy.write_row((chart_id, row["username"], row["score"], row["lamp"]))
 
             await cur.execute(
                 "create index scores_chart_id_score_idx on scores (chart_id, score)"
