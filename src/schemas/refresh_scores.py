@@ -17,7 +17,7 @@ DIFFICULTIES = {
     "CDP": 8,
 }
 
-limiter = AsyncLimiter(60)
+limiter = AsyncLimiter(120)
 
 
 async def execute_req(client, cur, conn, chart_id, difficulty, song_id, song_name):
