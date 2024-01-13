@@ -44,7 +44,7 @@ async def execute_req(client, cur, conn, chart_id, difficulty, song_id, song_nam
 
 async def main():
     async with await psycopg.AsyncConnection.connect(
-        "service=3ic"
+        "service=local"
     ) as conn, httpx.AsyncClient() as client:
         async with conn.cursor() as cur:
             await cur.execute(
@@ -54,14 +54,12 @@ async def main():
             )
             data = await cur.fetchall()
 
-            all_data = await asyncio.gather(
-                *[
-                    execute_req(
-                        client, cur, conn, chart_id, difficulty, song_id, song_name
-                    )
-                    for chart_id, difficulty, song_id, song_name in data
-                ]
-            )
+            all_data = [
+                await execute_req(
+                    client, cur, conn, chart_id, difficulty, song_id, song_name
+                )
+                for chart_id, difficulty, song_id, song_name in data
+            ]
 
             print("Inserting")
             await cur.execute("truncate scores")

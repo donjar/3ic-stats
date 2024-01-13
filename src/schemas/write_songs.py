@@ -10,7 +10,7 @@ cleaned = json.loads(
 
 difficulties = ["bSP", "BSP", "DSP", "ESP", "CSP", "BDP", "DDP", "EDP", "CDP"]
 
-with psycopg.connect("service=3ic") as conn:
+with psycopg.connect("service=local") as conn:
     for c in cleaned:
         if c.get("deleted") == 1:
             continue
@@ -38,9 +38,6 @@ with psycopg.connect("service=3ic") as conn:
 
             for r, difficulty in zip(c["ratings"], difficulties):
                 if r == 0:
-                    continue
-
-                if r < 13:  # We only include difficulty >= 13 to save space
                     continue
 
                 cur.execute(

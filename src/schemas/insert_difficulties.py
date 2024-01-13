@@ -7,7 +7,7 @@ from scipy.special import log_ndtr
 
 
 def get_data(rating, sp_or_dp="D", score_cutoff=None, lamp_cutoff=None):
-    conn = psycopg.connect("service=3ic")
+    conn = psycopg.connect("service=local")
 
     charts = conn.execute(
         f"select count(distinct charts.id) from charts inner join scores on scores.chart_id = charts.id inner join songs on charts.song_id = songs.id where difficulty like '%{sp_or_dp}P' and rating = {rating}"
@@ -47,7 +47,7 @@ def get_data(rating, sp_or_dp="D", score_cutoff=None, lamp_cutoff=None):
 
 
 def write_to_pg(res, score_cutoff, lamp_cutoff):
-    conn = psycopg.connect("service=3ic")
+    conn = psycopg.connect("service=local")
     for row in res:
         song, diff = row
         diff = float(diff)
