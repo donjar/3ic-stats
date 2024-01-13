@@ -1,6 +1,6 @@
 "use client";
 
-import supabase from "../../../../../../lib/supabase";
+import runSql from "../../../../../../lib/run-sql";
 import { useEffect, useState } from "react";
 import { Card, Checkbox, Spin, Col, Row } from "antd";
 import Head from "next/head";
@@ -49,22 +49,6 @@ const RANK_COLORS = [
   magenta.primary,
 ];
 
-const chunkifyAndSend = async <T, U>(
-  data: T[],
-  lambda: (data: T[]) => Promise<U[]>,
-): Promise<U[]> => {
-  const split = 100;
-  let i = 0;
-  let res: U[] = [];
-
-  while (i < data.length) {
-    res = res.concat(await lambda(data.slice(i, i + split)));
-    i += 100;
-  }
-
-  return res;
-};
-
 const Page = ({
   params: { username, mode, difficulty, cutoff },
 }: {
@@ -77,61 +61,49 @@ const Page = ({
   const [data, setData] = useState<Datum[] | null>(null);
   useEffect(() => {
     (async () => {
-      const charts = await supabase
-        .from("charts")
-        .select("id, difficulty, songs(song_name)")
-        .eq("rating", difficulty)
-        .in(
-          "difficulty",
+      const charts = await runSql(
+        `select charts.id, difficulty, songs.song_name
+         from charts
+         inner join songs on charts.song_id = songs.id
+         where rating = $1
+         and difficulty in (select * from unnest($2::text[]))`,
+        [
+          difficulty,
           mode === "single"
             ? ["bSP", "BSP", "DSP", "ESP", "CSP"]
             : mode === "double"
             ? ["BDP", "DDP", "EDP", "CDP"]
             : [],
-        );
-      const chartsData = charts.data ?? [];
+        ],
+      );
 
-      const scoresWithRank = await chunkifyAndSend(
-        chartsData.map(({ id }) => id),
-        async (data) =>
-          (
-            await supabase
-              .from("scores_with_rank")
-              .select()
-              .eq("username", username)
-              .in("chart_id", data)
-          ).data ?? [],
+      const scoresWithRank = await runSql(
+        `select chart_id, score, lamp from scores_with_rank
+         where username = $1 and chart_id in (select * from unnest($2::uuid[]))`,
+        [username, charts.map(({ id }) => id)],
       );
       const scoresByChartId = Object.fromEntries(
         scoresWithRank.map((s) => [s.chart_id, s]),
       );
 
-      const difficultiesData = await chunkifyAndSend(
-        chartsData.map(({ id }) => id),
-        async (data) =>
-          (
-            await supabase
-              .from("difficulties")
-              .select()
-              .in("chart_id", data)
-              .eq("lamp_cutoff", cutoff)
-          ).data ?? [],
+      const difficultiesData = await runSql(
+        `select chart_id, difficulty from difficulties
+         where lamp_cutoff = $1 and chart_id in (select * from unnest($2::uuid[]))`,
+        [cutoff, charts.map(({ id }) => id)],
       );
       const difficultiesByChartId = Object.fromEntries(
-        difficultiesData.map((s) => [s.chart_id, s.difficulty]),
+        difficultiesData.map((s) => [s.chart_id, Number(s.difficulty)]),
       );
 
       setData(
-        chartsData
-          // @ts-expect-error
-          .map(({ id, difficulty, songs: { song_name } }) => ({
-            song: song_name,
-            chartId: id,
-            difficulty,
-            score: scoresByChartId[id]?.score,
-            lamp: scoresByChartId[id]?.lamp,
-            diffi: difficultiesByChartId[id],
-          })),
+        charts.map(({ id, difficulty, song_name }) => ({
+          song: song_name,
+          chartId: id,
+          difficulty,
+          score: scoresByChartId[id]?.score,
+          lamp: scoresByChartId[id]?.lamp,
+          diffi: difficultiesByChartId[id],
+        })),
       );
     })();
   }, [username, mode, difficulty, cutoff]);

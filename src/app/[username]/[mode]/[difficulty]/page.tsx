@@ -1,6 +1,6 @@
 "use client";
 
-import supabase from "../../../../lib/supabase";
+import runSql from "../../../../lib/run-sql";
 import { useEffect, useState } from "react";
 import { Button, Card, Spin, Col, Row, Space } from "antd";
 import { DoubleLeftOutlined, DoubleRightOutlined } from "@ant-design/icons";
@@ -67,48 +67,43 @@ const Page = ({
   const [data, setData] = useState<Datum[] | null>(null);
   useEffect(() => {
     (async () => {
-      const charts = await supabase
-        .from("charts")
-        .select("id, difficulty, songs(song_name)")
-        .eq("rating", difficulty)
-        .in(
-          "difficulty",
+      const charts = await runSql(
+        `select charts.id, difficulty, songs.song_name
+         from charts
+         inner join songs on charts.song_id = songs.id
+         where rating = $1
+         and difficulty in (select * from unnest($2::text[]))`,
+        [
+          difficulty,
           mode === "single"
             ? ["bSP", "BSP", "DSP", "ESP", "CSP"]
             : mode === "double"
             ? ["BDP", "DDP", "EDP", "CDP"]
             : [],
-        );
-      const chartsData = charts.data ?? [];
-
-      const scoresWithRank = await supabase
-        .from("scores_with_rank")
-        .select()
-        .eq("username", username)
-        .in(
-          "chart_id",
-          chartsData.map(({ id }) => id),
-        );
-      const scoresByChartId = Object.fromEntries(
-        (scoresWithRank.data ?? []).map((s) => [s.chart_id, s]),
+        ],
       );
 
-      const targetScores = await supabase
-        .from("scores_with_rank")
-        .select()
-        .eq("row_number", 100)
-        .in(
-          "chart_id",
-          chartsData.map(({ id }) => id),
-        );
+      const scoresWithRank = await runSql(
+        `select chart_id, score, lamp, rank from scores_with_rank
+         where username = $1 and chart_id in (select * from unnest($2::uuid[]))`,
+        [username, charts.map(({ id }) => id)],
+      );
+      const scoresByChartId = Object.fromEntries(
+        scoresWithRank.map((s) => [s.chart_id, s]),
+      );
+
+      const targetScores = await runSql(
+        `select chart_id, score from scores_with_rank
+         where row_number = 100 and chart_id in (select * from unnest($1::uuid[]))`,
+        [charts.map(({ id }) => id)],
+      );
       const targetScoresByChartId = Object.fromEntries(
-        (targetScores.data ?? []).map((s) => [s.chart_id, s]),
+        targetScores.map((s) => [s.chart_id, s]),
       );
 
       setData(
-        chartsData
-          // @ts-expect-error
-          .map(({ id, difficulty, songs: { song_name } }) => ({
+        charts
+          .map(({ id, difficulty, song_name }) => ({
             song: song_name,
             chartId: id,
             difficulty,
