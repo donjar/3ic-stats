@@ -37,7 +37,7 @@ async def execute_req(client, cur, conn, chart_id, difficulty, song_id, song_nam
         except Exception:
             continue
     res.raise_for_status()
-    print(f"({datetime.now()}) Done {song_name} {difficulty}")
+    # print(f"({datetime.now()}) Done {song_name} {difficulty}")
 
     return chart_id, res.json()
 
