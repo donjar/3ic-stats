@@ -3,7 +3,7 @@ from pprint import pprint
 
 
 def show_avail_diffs():
-    conn = psycopg.connect("service=local")
+    conn = psycopg.connect("service=3ic")
     pprint(
         conn.execute(
             "select distinct substring(charts.difficulty from 2 for 1), rating, score_cutoff, lamp_cutoff from difficulties inner join charts on chart_id = charts.id order by 1, 2, 3, 4"
@@ -12,7 +12,7 @@ def show_avail_diffs():
 
 
 def calibrate(zero, hundred, rating, sp_or_dp="D", score_cutoff=None, lamp_cutoff=None):
-    conn = psycopg.connect("service=local", cursor_factory=psycopg.ClientCursor)
+    conn = psycopg.connect("service=3ic", cursor_factory=psycopg.ClientCursor)
     d = conn.execute(
         """
         select chart_id, difficulties.difficulty
@@ -43,9 +43,9 @@ def calibrate(zero, hundred, rating, sp_or_dp="D", score_cutoff=None, lamp_cutof
 
 show_avail_diffs()
 calibrate(
-    zero="da364d75-1734-4c98-817e-7f96c7bdbe75",
-    hundred="81abb371-7d7a-4f5c-999c-cec41d5d964e",
-    sp_or_dp="D",
-    rating=18,
+    zero="c7fcb888-9229-4e2e-b7db-38f4023473f9",
+    hundred="8dd53849-fe49-40b0-b1a2-d410974c52c5",
+    sp_or_dp="S",
+    rating=14,
     lamp_cutoff=1,
 )
