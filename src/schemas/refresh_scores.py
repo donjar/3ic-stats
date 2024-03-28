@@ -36,10 +36,10 @@ async def execute_req(client, cur, conn, chart_id, difficulty, song_id, song_nam
             )
             bpms = (
                 BeautifulSoup(
-                    await client.get(
+                    (await client.get(
                         f"https://3icecream.com/ddr/song_details/{song_id}",
                         timeout=None,
-                    ).text
+                    )).text
                 )
                 .find_all("span", class_="sp-bpm")
             )
@@ -67,17 +67,21 @@ async def main():
 
             await cur.execute("truncate scores")
             await cur.execute("drop index scores_chart_id_score_idx")
+            bpms = []
             async with cur.copy("copy scores (chart_id, username, score, lamp) from stdin") as copy:
                 for chart_id, difficulty, song_id, song_name in tqdm.tqdm(data):
                     bpm, res = await execute_req(
                         client, cur, conn, chart_id, difficulty, song_id, song_name
                     )
-                    await cur.execute(
-                        "update songs set bpm = ? where song_id = ?", [bpm, song_id]
-                    )
+                    bpms.append((bpm, song_id))
 
                     for row in res:
                         await copy.write_row((chart_id, row["username"], row["score"], row["lamp"]))
+
+            for bpm, song_id in bpms:
+                await cur.execute(
+                    "update songs set bpm = %s where song_id = %s", (bpm, song_id)
+                )
 
             await cur.execute(
                 "create index scores_chart_id_score_idx on scores (chart_id, score)"
