@@ -62,7 +62,7 @@ const Page = ({
   useEffect(() => {
     (async () => {
       const charts = await runSql(
-        `select charts.id, difficulty, songs.song_name
+        `select charts.id, difficulty, songs.song_name, bpm
          from charts
          inner join songs on charts.song_id = songs.id
          where rating = $1
@@ -96,10 +96,11 @@ const Page = ({
       );
 
       setData(
-        charts.map(({ id, difficulty, song_name }) => ({
+        charts.map(({ id, difficulty, song_name, bpm }) => ({
           song: song_name,
           chartId: id,
           difficulty,
+          bpm,
           score: scoresByChartId[id]?.score,
           lamp: scoresByChartId[id]?.lamp,
           diffi: difficultiesByChartId[id],
@@ -144,7 +145,7 @@ const Page = ({
         />
         <Row gutter={[8, 8]}>
           {sortedData.map(
-            ({ song, difficulty, score, lamp, chartId, diffi }) => (
+            ({ song, difficulty, score, lamp, chartId, diffi, bpm }) => (
               <Col xs={24} md={8} key={chartId}>
                 <Card
                   title={
@@ -162,7 +163,7 @@ const Page = ({
                         : "#ddd",
                   }}
                 >
-                  <p>Difficulty {diffi?.toFixed(0)}</p>
+                  <p>Difficulty {diffi?.toFixed(0)} BPM {bpm}</p>
                   <p style={{ color: RANK_COLORS[lamp] }}>{score ?? "-"}</p>
                 </Card>
               </Col>
