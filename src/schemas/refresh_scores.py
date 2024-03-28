@@ -3,6 +3,7 @@ import httpx
 import psycopg
 import tqdm
 from aiolimiter import AsyncLimiter
+from bs4 import BeautifulSoup
 from datetime import datetime
 
 DIFFICULTIES = {
@@ -33,13 +34,23 @@ async def execute_req(client, cur, conn, chart_id, difficulty, song_id, song_nam
                 },
                 timeout=None,
             )
+            bpms = (
+                BeautifulSoup(
+                    await client.get(
+                        f"https://3icecream.com/ddr/song_details/{song_id}",
+                        timeout=None,
+                    ).text
+                )
+                .find_all("span", class_="sp-bpm")
+            )
+            bpm = bpms[-1].text if len(bpms) > 0 else None
             break
         except Exception:
             continue
     res.raise_for_status()
     # print(f"({datetime.now()}) Done {song_name} {difficulty}")
 
-    return chart_id, res.json()
+    return bpm, res.json()
 
 
 async def main():
@@ -56,14 +67,21 @@ async def main():
 
             await cur.execute("truncate scores")
             await cur.execute("drop index scores_chart_id_score_idx")
-            with cursor.copy("copy scores (chart_id, username, score, lamp) from stdin") as copy:
+            with cursor.copy(
+                "copy scores (chart_id, username, score, lamp) from stdin"
+            ) as copy:
                 for chart_id, difficulty, song_id, song_name in tqdm.tqdm(data):
-                    res = await execute_req(
+                    bpm, res = await execute_req(
                         client, cur, conn, chart_id, difficulty, song_id, song_name
+                    )
+                    await cur.execute(
+                        "update songs set bpm = ? where song_id = ?", [bpm, song_id]
                     )
 
                     for row in res:
-                        copy.write_row((chart_id, row["username"], row["score"], row["lamp"]))
+                        copy.write_row(
+                            (chart_id, row["username"], row["score"], row["lamp"])
+                        )
 
             await cur.execute(
                 "create index scores_chart_id_score_idx on scores (chart_id, score)"
