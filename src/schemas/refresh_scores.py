@@ -67,9 +67,7 @@ async def main():
 
             await cur.execute("truncate scores")
             await cur.execute("drop index scores_chart_id_score_idx")
-            with cursor.copy(
-                "copy scores (chart_id, username, score, lamp) from stdin"
-            ) as copy:
+            async with cur.copy("copy scores (chart_id, username, score, lamp) from stdin") as copy:
                 for chart_id, difficulty, song_id, song_name in tqdm.tqdm(data):
                     bpm, res = await execute_req(
                         client, cur, conn, chart_id, difficulty, song_id, song_name
@@ -79,9 +77,7 @@ async def main():
                     )
 
                     for row in res:
-                        copy.write_row(
-                            (chart_id, row["username"], row["score"], row["lamp"])
-                        )
+                        await copy.write_row((chart_id, row["username"], row["score"], row["lamp"]))
 
             await cur.execute(
                 "create index scores_chart_id_score_idx on scores (chart_id, score)"
