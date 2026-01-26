@@ -43,9 +43,9 @@ def calibrate(zero, hundred, rating, sp_or_dp="D", score_cutoff=None, lamp_cutof
 
 show_avail_diffs()
 calibrate(
-    zero="87e94093-35a7-454e-915b-36c82dfa33b8",
-    hundred="436832df-387e-43f0-bfca-a3044839e03e",
-    sp_or_dp="S",
-    rating=15,
-    lamp_cutoff=1,
+    zero="2aa82d4e-f9f9-4b0d-8178-637d4274a32a",
+    hundred="62ee9cc5-e2e9-4b46-afbb-4387b80fa0d9",
+    sp_or_dp="D",
+    rating=16,
+    score_cutoff=990000,
 )

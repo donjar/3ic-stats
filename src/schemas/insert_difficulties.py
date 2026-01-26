@@ -64,7 +64,58 @@ def get_89k_dp_data(_rating, _sp_or_dp, _score_cutoff, _lamp_cutoff):
     data = defaultdict(dict)
     for rating, difficulty, username, score, lamp, song_name in d:
         flare = "EX" if rating == 16 else "IX"
-        is_pass = (rating == 16 and lamp >= 4 and score >= 993000) or (rating != 16 and (lamp >= 3 or score >= 980000))
+        is_pass = (rating == 16 and lamp >= 4 and score >= 993000) or (
+            rating != 16 and (lamp >= 3 or score >= 980000)
+        )
+        data[username][f"{song_name} {difficulty} {flare}"] = 1 if is_pass else -1
+
+    ls = []
+    all_players = []
+    all_charts = []
+
+    chart_to_idx = {}
+    for username, dat in data.items():
+        all_players.append(username)
+        row = [0 for _ in range(charts)]
+
+        for chart_id, pt in dat.items():
+            if chart_id not in chart_to_idx:
+                chart_to_idx[chart_id] = len(chart_to_idx)
+                all_charts.append(chart_id)
+            row[chart_to_idx[chart_id]] = pt
+
+        ls.append(row)
+
+    ls = np.array(ls)
+
+    return ls, all_players, all_charts
+
+
+def get_90k_dp_data(_rating, _sp_or_dp, _score_cutoff, _lamp_cutoff):
+    """
+    17EX --> GFC 994k+
+    18IX --> (FC and 970k+) or (GFC and 975k+) or 980k+
+    """
+    conn = psycopg.connect("service=3ic")
+
+    charts = conn.execute(
+        f"select count(distinct charts.id) from charts inner join scores on scores.chart_id = charts.id inner join songs on charts.song_id = songs.id where difficulty like '%DP' and rating in (17, 18)"
+    ).fetchone()[0]
+    d = conn.execute(
+        f"select rating, difficulty, username, score, lamp, song_name from scores inner join charts on scores.chart_id = charts.id inner join songs on charts.song_id = songs.id where difficulty like '%DP' and rating in (17, 18);"
+    ).fetchall()
+
+    data = defaultdict(dict)
+    for rating, difficulty, username, score, lamp, song_name in d:
+        flare = "EX" if rating == 17 else "IX"
+        is_pass = (rating == 17 and lamp >= 4 and score >= 994000) or (
+            rating == 18
+            and (
+                (lamp >= 3 and score >= 970000)
+                or (lamp >= 4 and score >= 975000)
+                or score >= 980000
+            )
+        )
         data[username][f"{song_name} {difficulty} {flare}"] = 1 if is_pass else -1
 
     ls = []
@@ -109,7 +160,51 @@ def write_to_pg(res, score_cutoff, lamp_cutoff):
         conn.commit()
 
 
-def main(rating=None, sp_or_dp="D", score_cutoff=None, lamp_cutoff=None, fn=get_data, pg=True, csv_name=None):
+def get_789_sdp_dp_data(_rating, _sp_or_dp, _score_cutoff, _lamp_cutoff):
+    conn = psycopg.connect("service=3ic")
+
+    charts = conn.execute(
+        f"select count(distinct charts.id) from charts inner join scores on scores.chart_id = charts.id inner join songs on charts.song_id = songs.id where difficulty like '%DP' and rating in (7, 8, 9)"
+    ).fetchone()[0]
+    d = conn.execute(
+        f"select rating, difficulty, username, score, lamp, song_name from scores inner join charts on scores.chart_id = charts.id inner join songs on charts.song_id = songs.id where difficulty like '%DP' and rating in (7, 8, 9);"
+    ).fetchall()
+
+    data = defaultdict(dict)
+    for rating, difficulty, username, score, lamp, song_name in d:
+        data[username][f"{song_name} {difficulty}"] = 1 if score > 999900 else -1
+
+    ls = []
+    all_players = []
+    all_charts = []
+
+    chart_to_idx = {}
+    for username, dat in data.items():
+        all_players.append(username)
+        row = [0 for _ in range(charts)]
+
+        for chart_id, pt in dat.items():
+            if chart_id not in chart_to_idx:
+                chart_to_idx[chart_id] = len(chart_to_idx)
+                all_charts.append(chart_id)
+            row[chart_to_idx[chart_id]] = pt
+
+        ls.append(row)
+
+    ls = np.array(ls)
+
+    return ls, all_players, all_charts
+
+
+def main(
+    rating=None,
+    sp_or_dp="D",
+    score_cutoff=None,
+    lamp_cutoff=None,
+    fn=get_data,
+    pg=True,
+    csv_name=None,
+):
     if not pg and not csv_name:
         raise Exception("No output")
     print(rating, sp_or_dp, score_cutoff, lamp_cutoff)
@@ -140,11 +235,13 @@ def main(rating=None, sp_or_dp="D", score_cutoff=None, lamp_cutoff=None, fn=get_
     if pg:
         write_to_pg(result, score_cutoff, lamp_cutoff)
     if csv_name:
-        with open(csv_name, 'w', newline='') as f:
+        with open(csv_name, "w", newline="") as f:
             csv.writer(f).writerows(result)
 
-# main(rating=16, sp_or_dp="D", lamp_cutoff=5)
-# main(rating=17, sp_or_dp="D", lamp_cutoff=5)
-# main(rating=18, sp_or_dp="D", lamp_cutoff=5)
-# main(rating=19, sp_or_dp="D", lamp_cutoff=1, csv_name="19_clear.csv")
-main(fn=get_89k_dp_data, pg=False, csv_name="89k.csv")
+
+# main(rating=18, sp_or_dp="D", score_cutoff=950000)
+# main(rating=18, sp_or_dp="D", score_cutoff=900000)
+main(rating=17, sp_or_dp="D", score_cutoff=990000)
+main(rating=16, sp_or_dp="D", score_cutoff=990000)
+# main(fn=get_90k_dp_data, pg=False, csv_name="90k.csv")
+# main(fn=get_789_sdp_dp_data, pg=False, csv_name="sdp.csv")
